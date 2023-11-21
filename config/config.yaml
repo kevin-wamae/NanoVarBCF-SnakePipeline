@@ -1,0 +1,134 @@
+# STEP 1 - INPUT FILES
+# *********************************************************************
+
+
+# --------------------------------
+# fastq files, adapters (if needed) and genome files
+input:
+  fastq: input/fastq/                                         # raw fastq files
+  genome:
+    fasta: output/01_snpeff_database/genomes/P.falciparum.fa  # local copy of genome fasta file
+    gff: output/01_snpeff_database/P.falciparum/genes.gff     # local copy of genome gff file
+    bed: input/bed/p.falciparum_target_genes.bed              # bed file with target genes
+
+
+
+# STEP 2 - GATHER GENOME DATA
+# *********************************************************************
+
+# --------------------------------
+# copy genomes files to output directory
+genome_data:
+  dir: output/02_genome_reference/  # output directory
+  fasta: fasta/genome.fa            # genome fasta file, copied from snpeff database
+  gff: gff/genome.gff               # genome gff file, copied from snpeff database
+
+
+
+# STEP 3 - QUALITY CONTROL
+# *********************************************************************
+
+# --------------------------------
+# nanoplot qc
+qc:
+  threads: 2
+  nanoplot: output/03_quality_control/nanoplot/  # output directory
+
+
+
+#  STEP 4 - MAP READS TO GENOME
+# *********************************************************************
+
+# --------------------------------
+# samtools
+samtools:
+  index: output/02_genome_reference/fasta/genome.fa.fai  # genome fasta index file
+  view:
+      - "--bam"                     # output in BAM format
+      - "--with-header"             # include header in output
+      - "-F 4"                      # exclude unmapped reads
+      - "-q 20"                     # exclude reads with mapping quality < 20
+
+
+# --------------------------------
+# porechop
+porechop:
+  dir: output/04_trimmed_fastq/  # output directory
+  threads: 2
+
+
+# --------------------------------
+# minimap2
+minimap2:
+  threads: 2
+  dir: output/05_assembly/bam/                        # output directory
+  index: output/02_genome_reference/fasta/genome.mmi  # genome fasta index file
+  extra:
+    index:
+      - "-a"                                          # output in SAM format {default: PAF}
+      - "-x map-ont"                                  # minimap2 preset for nanopore reads
+    align:
+      - "-a"                                          # output in SAM format
+      - "-x map-ont"                                  # minimap2 preset for nanopore reads
+      - "-Y"                                          # use soft clipping for supplementary alignments
+      - "--MD"                                        # include MD (mismatching positions) tag in SAM output
+
+
+# --------------------------------
+# bedtools_genomecov
+bedtools:
+  dir: output/05_assembly/genome_cov/ # output directory
+
+
+
+#  STEP 5 - VARIANT CALLING
+# *********************************************************************
+
+# --------------------------------
+variant_calling:
+  threads: 2
+  medaka:
+    consensus:
+      dir: output/06_variant_calling/medaka/1_consensus/  # output directory
+    variant:
+      dir: output/06_variant_calling/medaka/2_variant/
+    haploid:
+      dir: output/06_variant_calling/medaka/3_haploid/
+  freebayes:
+    dir: output/06_variant_calling/freebayes/
+    extra:
+      - "--ploidy 2"                     # sets the default ploidy for the analysis to N {default: 2}
+      - "--report-all-haplotype-alleles" # output will include details on all existing genetic variations, not just the ones that are specifically identified as different
+      - "--min-alternate-fraction 0.05"  # minimum fraction of alternate bases to call a variant {default: 0.05}
+  clair3:
+    dir_model: output/06_variant_calling/clair3/model/
+    model_url: http://www.bio8.cs.hku.hk/clair3/clair3_models/
+    model: r941_prom_sup_g5014.tar.gz
+    dir_variants: output/06_variant_calling/clair3/variants/
+
+
+
+# STEP 6 - VARIANT ANNOTATION
+# *********************************************************************
+
+# --------------------------------
+snpeff:
+  dir:
+    vcf_annot: output/07_variant_annotation/1_vcf_annotated/
+    vcf_vartype: output/07_variant_annotation/2_vcf_vartype/
+  config: .snpEff.config             # snpeff config file
+  database: P.falciparum             # snpeff database
+  extra:                              # extra options to pass to snpeff
+    - "-hgvs1LetterAa"                  # use one-letter amino acid codes in HGVS
+    - "-noStats"                        # do not create stats (summary) file
+    - "-hgvsOld"                        # use old HGVS format
+
+
+# --------------------------------
+gatk:
+  dir: output/07_variant_annotation/3_vcf_to_tsv/  # output directory
+  threads: 2
+  java_opts:
+    - "-Xms4G"                       # initial heap size
+    - "-Xmx4G"                       # maximum heap size
+    - "-XX:ParallelGCThreads=2"      # number of threads to use for garbage collection
