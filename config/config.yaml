@@ -9,7 +9,7 @@ dir: 2023_11_22-01
 
 # --------------------------------
 # number of threads to use for each rule
-threads: 3
+threads: 2
 
 # --------------------------------
 # fastq files, adapters (if needed) and genome files
@@ -38,9 +38,10 @@ genome_data:
 # *********************************************************************
 
 # --------------------------------
-# nanoplot qc
+# fastq integrity check & nanoplot qc
 qc:
-  nanoplot: output/02_analysis/{dir}/01_quality_control/nanoplot/  # output directory
+  integrity: output/02_analysis/{dir}/01_quality_control/integrity/  # output directory
+  nanoplot: output/02_analysis/{dir}/01_quality_control/nanoplot/    # output directory
 
 
 
@@ -63,6 +64,7 @@ samtools:
 porechop:
   dir: output/02_analysis/{dir}/02_trimmed_fastq/  # output directory
   checkreads: 10000                                # number of reads to check for adapters {default: 10000}
+  verbosity: 0                                     # level of verbosity {0 = none, 1 = some, 2 = lots, 3 = full}
 
 
 # --------------------------------

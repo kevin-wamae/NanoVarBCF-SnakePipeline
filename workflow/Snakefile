@@ -30,7 +30,8 @@ rule all:
         config["genome_data"]["dir"] + config["genome_data"]["fasta"],
         config["genome_data"]["dir"] + config["genome_data"]["gff"],
         # -----------------------------------
-        # nanoplot quality check
+        # fastq integrity check & nanoplot qc
+        expand(config["qc"]["integrity"].format(dir=config['dir']) + "{sample}-passed", sample=SAMPLES),
         expand(config["qc"]["nanoplot"].format(dir=config['dir']) + "{sample}", sample=SAMPLES),
         # -----------------------------------
         # samtools index
@@ -111,6 +112,7 @@ rule gather_genome_data:
         echo "##############################################"
 
         rsync --update {input.genome} {output.genome}
+
         rsync --update {input.gff} {output.gff}
         """
 
@@ -120,13 +122,37 @@ rule gather_genome_data:
 # ######################################################################
 
 
-# 3) nanoplot - quality check of raw reads
+# 3a) check_fastq_integrity - check fastq integrity
+# *********************************************************************
+rule check_fastq_integrity:
+    input:
+        fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
+    output:
+        touch(config["qc"]["integrity"].format(dir=config['dir']) + "{sample}-passed"),
+    shell:
+        """
+        gunzip -t {input.fastq}
+        if [ $? -eq 0 ]; then
+            touch {output}
+            echo "Integrity check passed for {input.fastq}"
+        else
+            echo "Integrity check failed for {input.fastq}"
+            exit 1
+        fi
+        """
+
+
+
+# 3b) nanoplot - check quality of raw reads
 # *********************************************************************
 rule nanoplot_qc:
     input:
         fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
+        integrity_check=rules.check_fastq_integrity.output,
     output:
-        qc_dir=directory(config["qc"]["nanoplot"].format(dir=config['dir']) + "{sample}"),
+        dir=directory(config["qc"]["nanoplot"].format(dir=config['dir']) + "{sample}"),
+    log:
+        config["qc"]["nanoplot"].format(dir=config['dir']) + "{sample}.log"
     singularity:
         "https://depot.galaxyproject.org/singularity/nanoplot:1.42.0--pyhdfd78af_0"
     threads:
@@ -140,9 +166,9 @@ rule nanoplot_qc:
         NanoPlot \
             --threads {threads} \
             --fastq {input.fastq} \
-            --outdir {output.qc_dir} \
+            --outdir {output.dir} \
             --tsv_stats \
-            --only-report
+            --only-report &> {log}
         """
 
 
@@ -175,12 +201,14 @@ rule samtools_index:
 rule porechop_trim:
     input:
         fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
+        integrity_check=rules.check_fastq_integrity.output,
     output:
         fastq=config["porechop"]["dir"].format(dir=config['dir']) + "{sample}.fastq.gz",
     log:
         config["porechop"]["dir"].format(dir=config['dir']) + "{sample}.log"
     params:
         checkreads=config["porechop"]["checkreads"],
+        verbosity=config["porechop"]["verbosity"]
     threads:
         config["threads"]
     singularity:
@@ -195,7 +223,8 @@ rule porechop_trim:
             --threads {threads} \
             --check_reads {params.checkreads} \
             --input {input.fastq} \
-            --output {output.fastq} &> {log}
+            --output {output.fastq} \
+            --verbosity {params.verbosity} &> {log}
         """
 
 
@@ -363,6 +392,7 @@ rule medaka_haploid_variant:
     input:
         genome=rules.gather_genome_data.output.genome,
         fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
+        integrity_check=rules.check_fastq_integrity.output,
     output:
         vcf_dir=directory(config["medaka"]["haploid"]["dir"].format(dir=config['dir']) + "{sample}"),
         vcf=config["medaka"]["haploid"]["dir"].format(dir=config['dir']) + "{sample}/medaka.annotated.vcf",
