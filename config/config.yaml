@@ -1,4 +1,4 @@
-# STEP 1 - INPUT FILES
+# STEP 1 - INPUT FILES and VARIABLES
 # *********************************************************************
 
 # user specified output directory {default: YYYY_MM_DD-run}
@@ -62,7 +62,7 @@ samtools:
 # porechop
 porechop:
   dir: output/02_analysis/{dir}/02_trimmed_fastq/  # output directory
-  checkreads: 1000                                 # number of reads to check for adapters {default: 10000}
+  checkreads: 10000                                # number of reads to check for adapters {default: 10000}
 
 
 # --------------------------------

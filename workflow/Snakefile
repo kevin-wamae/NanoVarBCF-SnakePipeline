@@ -4,6 +4,7 @@
 
 # TODO: add profiles {conda, singularity, cluster}
 # TODO: include all regions in the vcf files
+# TODO: include all regions in the vcf files
 
 # ######################################################################
 #                              Dependencies
@@ -194,7 +195,7 @@ rule porechop_trim:
             --threads {threads} \
             --check_reads {params.checkreads} \
             --input {input.fastq} \
-            --output {output.fastq} &>> {log}
+            --output {output.fastq} &> {log}
         """
 
 
