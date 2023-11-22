@@ -1,27 +1,25 @@
 # *****************************************************************
-# a bash script for creating a snpEff database in the output directory
-# last update worked with SnpEff 5.1d (build 2022-04-19 15:49)
+# This bash script creates a snpEff database in the output directory
+
+# currently, the script creates a snpEff database for P.falciparum,
+# but it can be easily modified to create a database for any organism
+# by changing the variables in the section below
 # *****************************************************************
 
+# variables for downloading genome files for the target organism
 # *****************************************************************
-# we are going to create a P.falciparum database using data from PlasmoDB
-# *****************************************************************
-
-# variables for downloading genome files
 GENOME_URL='https://plasmodb.org/common/downloads/release-51/Pfalciparum3D7/'
 GENOME_FASTA='fasta/data/PlasmoDB-51_Pfalciparum3D7_Genome.fasta'
 GENOME_CDS='fasta/data/PlasmoDB-51_Pfalciparum3D7_AnnotatedCDSs.fasta'
 GENOME_PROT='fasta/data/PlasmoDB-51_Pfalciparum3D7_AnnotatedProteins.fasta'
 GENOME_GFF='gff/data/PlasmoDB-51_Pfalciparum3D7.gff'
 
-# *****************************************************************
 # variables for snpEff database
 #   - replace ORGANISM value  with the name of your organism
 # *****************************************************************
-DATADIR='output/01_snpeff_database'
+DATADIR='output/01_databases/snpeff_database'
 ORGANISM='P.falciparum'
 
-# *****************************************************************
 # createsnpEff working directory inside DATADIR and download the
 # genome files
 # *****************************************************************
