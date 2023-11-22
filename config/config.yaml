@@ -4,8 +4,12 @@
 # user specified output directory {default: YYYY_MM_DD-run}
 # --------------------------------
 # user can change this to any name
-dir: 2021_03_01-01
+dir: 2023_11_22-01
 
+
+# --------------------------------
+# number of threads to use for each rule
+threads: 3
 
 # --------------------------------
 # fastq files, adapters (if needed) and genome files
@@ -36,7 +40,6 @@ genome_data:
 # --------------------------------
 # nanoplot qc
 qc:
-  threads: 3
   nanoplot: output/02_analysis/{dir}/01_quality_control/nanoplot/  # output directory
 
 
@@ -49,24 +52,23 @@ qc:
 samtools:
   index: output/01_databases/genome_reference/fasta/genome.fa.fai  # genome fasta index file
   view:
-      - "--bam"                     # output in BAM format
-      - "--with-header"             # include header in output
-      - "-F 4"                      # exclude unmapped reads
-      - "-q 20"                     # exclude reads with mapping quality < 20
+      - "--bam"          # output in BAM format
+      - "--with-header"  # include header in output
+      - "-F 4"           # exclude unmapped reads
+      - "-q 20"          # exclude reads with mapping quality < 20
 
 
 # --------------------------------
 # porechop
 porechop:
   dir: output/02_analysis/{dir}/02_trimmed_fastq/  # output directory
-  threads: 3
+  checkreads: 1000                                 # number of reads to check for adapters {default: 10000}
 
 
 # --------------------------------
 # minimap2
 minimap2:
-  threads: 3
-  dir: output/02_analysis/{dir}/03_assembly/bam/                      # output directory
+  dir: output/02_analysis/{dir}/03_assembly/bam/                # output directory
   index: output/01_databases/genome_reference/fasta/genome.mmi  # genome fasta index file
   extra:
     index:
@@ -90,26 +92,34 @@ bedtools:
 # *********************************************************************
 
 # --------------------------------
-variant_calling:
-  threads: 3
-  medaka:
-    consensus:
-      dir: output/02_analysis/{dir}/04_variant_calling/medaka/1_consensus/  # medaka consensus output directory
-    variant:
-      dir: output/02_analysis/{dir}/04_variant_calling/medaka/2_variant/    # medaka variant output directory
-    haploid:
-      dir: output/02_analysis/{dir}/04_variant_calling/medaka/3_haploid/    # medaka haploid output directory
-  freebayes:
-    dir: output/02_analysis/{dir}/04_variant_calling/freebayes/             # freebayes output directory
-    extra:
-      - "--ploidy 2"                      # sets the default ploidy for the analysis to N {default: 2}
-      - "--report-all-haplotype-alleles"  # output will include details on all existing genetic variations, not just the ones that are specifically identified as different
-      - "--min-alternate-fraction 0.05"   # minimum fraction of alternate bases to call a variant {default: 0.05}
-  clair3:
-    dir_model: output/02_analysis/{dir}/04_variant_calling/clair3/model/         # clair3 model directory
-    model_url: http://www.bio8.cs.hku.hk/clair3/clair3_models/             # clair3 model
-    model: r941_prom_sup_g5014.tar.gz                                      # clair3 model name
-    dir_variants: output/02_analysis/{dir}/04_variant_calling/clair3/variants/   # output directory
+# medaka consensus, variant and haploid
+medaka:
+  consensus:
+    dir: output/02_analysis/{dir}/04_variant_calling/medaka/1_consensus/  # medaka consensus output directory
+  variant:
+    dir: output/02_analysis/{dir}/04_variant_calling/medaka/2_variant/    # medaka variant output directory
+  haploid:
+    dir: output/02_analysis/{dir}/04_variant_calling/medaka/3_haploid/    # medaka haploid output directory
+
+
+# --------------------------------
+# freebayes
+freebayes:
+  dir: output/02_analysis/{dir}/04_variant_calling/freebayes/  # freebayes output directory
+  extra:
+    - "--ploidy 2"                      # sets the default ploidy for the analysis to N {default: 2}
+    - "--report-all-haplotype-alleles"  # output will include details on all existing genetic variations, not just the ones that are specifically identified as different
+    - "--min-alternate-fraction 0.05"   # minimum fraction of alternate bases to call a variant {default: 0.05}
+
+
+# --------------------------------
+# clair3
+clair3:
+  dir_model: output/01_databases/clair3_models/          # clair3 model directory
+  model_url: http://www.bio8.cs.hku.hk/clair3/clair3_models/                    # clair3 model
+  tar: r941_prom_sup_g5014.tar.gz                                               # clair3 model name
+  tar_ext: r941_prom_sup_g5014/                                                 # extracted clair3 model name
+  dir_variants: output/02_analysis/{dir}/04_variant_calling/clair3/variants/    # output directory
 
 
 
@@ -132,7 +142,6 @@ snpeff:
 # --------------------------------
 gatk:
   dir: output/02_analysis/{dir}/05_variant_annotation/3_vcf_to_tsv/  # output directory
-  threads: 3
   java_opts:
     - "-Xms4G"                       # initial heap size
     - "-Xmx4G"                       # maximum heap size
