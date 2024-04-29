@@ -6,6 +6,7 @@
 # TODO: include all regions in the vcf files
 # TODO: include all regions in the vcf files
 
+
 # ######################################################################
 #                              Dependencies
 # ######################################################################
@@ -31,18 +32,30 @@ rule all:
         config["genome_data"]["dir"] + config["genome_data"]["gff"],
         # -----------------------------------
         # fastq integrity check & nanoplot qc
-        expand(config["qc"]["integrity"].format(dir=config['dir']) + "{sample}-passed", sample=SAMPLES),
-        expand(config["qc"]["nanoplot"].format(dir=config['dir']) + "{sample}", sample=SAMPLES),
+        expand(
+            config["qc"]["integrity"].format(dir=config["dir"]) + "{sample}-passed",
+            sample=SAMPLES,
+        ),
+        expand(
+            config["qc"]["nanoplot"].format(dir=config["dir"]) + "{sample}",
+            sample=SAMPLES,
+        ),
         # -----------------------------------
         # samtools index
         config["samtools"]["index"],
         # -----------------------------------
         # porechop
-        expand(config["porechop"]["dir"].format(dir=config['dir']) + "{sample}.fastq.gz", sample=SAMPLES),
+        expand(
+            config["porechop"]["dir"].format(dir=config["dir"]) + "{sample}.fastq.gz",
+            sample=SAMPLES,
+        ),
         # -----------------------------------
         # minimap2
         config["minimap2"]["index"],
-        expand(config["minimap2"]["dir"].format(dir=config['dir']) + "{sample}.bam", sample=SAMPLES),
+        expand(
+            config["minimap2"]["dir"].format(dir=config["dir"]) + "{sample}.bam",
+            sample=SAMPLES,
+        ),
         # -----------------------------------
         # bedtools genomecov
         expand(config["bedtools"]["dir"].format(dir=config['dir']) + "{sample}.bedGraph", sample=SAMPLES),
@@ -128,7 +141,7 @@ rule check_fastq_integrity:
     input:
         fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
     output:
-        touch(config["qc"]["integrity"].format(dir=config['dir']) + "{sample}-passed"),
+        touch(config["qc"]["integrity"].format(dir=config["dir"]) + "{sample}-passed"),
     shell:
         """
         gunzip -t {input.fastq}
@@ -142,7 +155,6 @@ rule check_fastq_integrity:
         """
 
 
-
 # 3b) nanoplot - check quality of raw reads
 # *********************************************************************
 rule nanoplot_qc:
@@ -150,13 +162,12 @@ rule nanoplot_qc:
         fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
         integrity_check=rules.check_fastq_integrity.output,
     output:
-        dir=directory(config["qc"]["nanoplot"].format(dir=config['dir']) + "{sample}"),
+        dir=directory(config["qc"]["nanoplot"].format(dir=config["dir"]) + "{sample}"),
     log:
-        config["qc"]["nanoplot"].format(dir=config['dir']) + "{sample}.log"
+        config["qc"]["nanoplot"].format(dir=config["dir"]) + "{sample}.log",
     singularity:
         "https://depot.galaxyproject.org/singularity/nanoplot:1.42.0--pyhdfd78af_0"
-    threads:
-        config["threads"]
+    threads: config["threads"]
     shell:
         """
         echo "##############################################"
@@ -203,14 +214,13 @@ rule porechop_trim:
         fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
         integrity_check=rules.check_fastq_integrity.output,
     output:
-        fastq=config["porechop"]["dir"].format(dir=config['dir']) + "{sample}.fastq.gz",
+        fastq=config["porechop"]["dir"].format(dir=config["dir"]) + "{sample}.fastq.gz",
     log:
-        config["porechop"]["dir"].format(dir=config['dir']) + "{sample}.log"
+        config["porechop"]["dir"].format(dir=config["dir"]) + "{sample}.log",
     params:
         checkreads=config["porechop"]["checkreads"],
-        verbosity=config["porechop"]["verbosity"]
-    threads:
-        config["threads"]
+        verbosity=config["porechop"]["verbosity"],
+    threads: config["threads"]
     singularity:
         "https://depot.galaxyproject.org/singularity/porechop:0.2.4--py39hc16433a_4"
     shell:
@@ -236,11 +246,10 @@ rule minimap2_index:
     output:
         index=config["minimap2"]["index"],
     params:
-        extra=config["minimap2"]["extra"]["index"]
+        extra=config["minimap2"]["extra"]["index"],
     singularity:
         "https://depot.galaxyproject.org/singularity/minimap2:2.26--he4a0461_2"
-    threads:
-        config["threads"]
+    threads: config["threads"]
     shell:
         """
         echo "##############################################"
@@ -262,17 +271,17 @@ rule minimap2_align:
         fai=rules.samtools_index.output.index,
         ref=rules.gather_genome_data.output.genome,
     output:
-        bam=config["minimap2"]["dir"].format(dir=config['dir']) + "{sample}.bam",
+        bam=config["minimap2"]["dir"].format(dir=config["dir"]) + "{sample}.bam",
     log:
-        minimap2=config["minimap2"]["dir"].format(dir=config['dir']) + "{sample}-minimap2.log"
+        minimap2=config["minimap2"]["dir"].format(dir=config["dir"])
+        + "{sample}-minimap2.log",
     params:
         extra_align=config["minimap2"]["extra"]["align"],
         extra_view=config["samtools"]["view"],
         read_group=r"-r '@RG\tID:{sample}\tSM:{sample}'",
     conda:
         "envs/minimap2.yaml"
-    threads:
-        config["threads"]
+    threads: config["threads"]
     shell:
         """
         echo "##############################################"
@@ -305,7 +314,8 @@ rule bedtools_genomecov:
     input:
         bam=rules.minimap2_align.output.bam,
     output:
-        bedGraph=config["bedtools"]["dir"].format(dir=config['dir']) + "{sample}.bedGraph",
+        bedGraph=config["bedtools"]["dir"].format(dir=config["dir"])
+        + "{sample}.bedGraph",
     singularity:
         "https://depot.galaxyproject.org/singularity/bedtools:2.31.0--hf5e1c6e_3"
     shell:
@@ -323,19 +333,20 @@ rule bedtools_genomecov:
 #         Step 5 - Variant Calling (Medaka, Freebayes, Clair3)
 ######################################################################
 
+
 # 5a i) medaka - consensus calling
 # *********************************************************************
 rule medaka_consensus:
     input:
         bam=rules.minimap2_align.output.bam,
     output:
-        hdf=config["medaka"]["consensus"]["dir"].format(dir=config['dir']) + "{sample}.hdf",
+        hdf=config["medaka"]["consensus"]["dir"].format(dir=config["dir"])
+        + "{sample}.hdf",
     log:
-        config["medaka"]["consensus"]["dir"].format(dir=config['dir']) + "{sample}.log"
+        config["medaka"]["consensus"]["dir"].format(dir=config["dir"]) + "{sample}.log",
     singularity:
         "https://depot.galaxyproject.org/singularity/medaka:1.11.1--py310h87e71ce_0"
-    threads:
-        config["threads"]
+    threads: config["threads"]
     shell:
         """
         echo "##############################################"
@@ -357,13 +368,17 @@ rule medaka_variant:
         genome=rules.gather_genome_data.output.genome,
         hdf=rules.medaka_consensus.output.hdf,
         bam=rules.minimap2_align.output.bam,
-        regions=config["input"]["genome"]["bed"]
+        regions=config["input"]["genome"]["bed"],
     output:
-        vcf=config["medaka"]["variant"]["dir"].format(dir=config['dir']) + "{sample}.vcf",
-        vcf_annotated=config["medaka"]["variant"]["dir"].format(dir=config['dir']) + "{sample}-annotated.vcf",
+        vcf=config["medaka"]["variant"]["dir"].format(dir=config["dir"])
+        + "{sample}.vcf",
+        vcf_annotated=config["medaka"]["variant"]["dir"].format(dir=config["dir"])
+        + "{sample}-annotated.vcf",
     log:
-        variant=config["medaka"]["variant"]["dir"].format(dir=config['dir']) + "{sample}-variant.log",
-        annotate=config["medaka"]["variant"]["dir"].format(dir=config['dir']) + "{sample}-annotate.log"
+        variant=config["medaka"]["variant"]["dir"].format(dir=config["dir"])
+        + "{sample}-variant.log",
+        annotate=config["medaka"]["variant"]["dir"].format(dir=config["dir"])
+        + "{sample}-annotate.log",
     singularity:
         "https://depot.galaxyproject.org/singularity/medaka:1.11.1--py310h87e71ce_0"
     shell:
@@ -394,14 +409,17 @@ rule medaka_haploid_variant:
         fastq=config["input"]["fastq"] + "{sample}.fastq.gz",
         integrity_check=rules.check_fastq_integrity.output,
     output:
-        vcf_dir=directory(config["medaka"]["haploid"]["dir"].format(dir=config['dir']) + "{sample}"),
-        vcf=config["medaka"]["haploid"]["dir"].format(dir=config['dir']) + "{sample}/medaka.annotated.vcf",
+        vcf_dir=directory(
+            config["medaka"]["haploid"]["dir"].format(dir=config["dir"]) + "{sample}"
+        ),
+        vcf=config["medaka"]["haploid"]["dir"].format(dir=config["dir"])
+        + "{sample}/medaka.annotated.vcf",
     log:
-        config["medaka"]["haploid"]["dir"].format(dir=config['dir']) + "{sample}-haploid-variant.log"
+        config["medaka"]["haploid"]["dir"].format(dir=config["dir"])
+        + "{sample}-haploid-variant.log",
     singularity:
         "https://depot.galaxyproject.org/singularity/medaka:1.11.1--py310h87e71ce_0"
-    threads:
-        config["threads"]
+    threads: config["threads"]
     shell:
         """
         echo "##############################################"
@@ -424,13 +442,13 @@ rule freebayes:
     input:
         genome=rules.gather_genome_data.output.genome,
         bam=rules.minimap2_align.output.bam,
-        regions=config["input"]["genome"]["bed"]
+        regions=config["input"]["genome"]["bed"],
     output:
-        vcf=config["freebayes"]["dir"].format(dir=config['dir']) + "{sample}.vcf",
+        vcf=config["freebayes"]["dir"].format(dir=config["dir"]) + "{sample}.vcf",
     log:
-        config["freebayes"]["dir"].format(dir=config['dir']) + "{sample}-freebayes.log"
+        config["freebayes"]["dir"].format(dir=config["dir"]) + "{sample}-freebayes.log",
     params:
-        extra=config["freebayes"]["extra"]
+        extra=config["freebayes"]["extra"],
     singularity:
         "https://depot.galaxyproject.org/singularity/freebayes:1.3.7--h1870644_0"
     shell:
@@ -454,9 +472,10 @@ rule download_clair3_model:
         tar=config["clair3"]["dir_model"] + config["clair3"]["tar"],
     log:
         wget=config["clair3"]["dir_model"] + "wget.log",
-        tar=config["clair3"]["dir_model"] + "tar.log"
+        tar=config["clair3"]["dir_model"] + "tar.log",
     params:
-        tar=config["clair3"]["model_url"].format(dir=config['dir']) + config["clair3"]["tar"],
+        tar=config["clair3"]["model_url"].format(dir=config["dir"])
+        + config["clair3"]["tar"],
     shell:
         """
         mkdir -p {output.dir}
@@ -475,16 +494,19 @@ rule clair3:
         bam=rules.minimap2_align.output.bam,
         model=rules.download_clair3_model.output.dir,
     output:
-        vcf_dir=directory(config["clair3"]["dir_variants"].format(dir=config['dir']) + "{sample}"),
-        vcf=config["clair3"]["dir_variants"].format(dir=config['dir']) + "{sample}/merge_output.vcf.gz",
+        vcf_dir=directory(
+            config["clair3"]["dir_variants"].format(dir=config["dir"]) + "{sample}"
+        ),
+        vcf=config["clair3"]["dir_variants"].format(dir=config["dir"])
+        + "{sample}/merge_output.vcf.gz",
     log:
-        config["clair3"]["dir_variants"].format(dir=config['dir']) + "{sample}/clair3.log"
+        config["clair3"]["dir_variants"].format(dir=config["dir"])
+        + "{sample}/clair3.log",
     singularity:
         "https://depot.galaxyproject.org/singularity/clair3:1.0.4--py39hf5e1c6e_3"
     params:
         model=config["clair3"]["dir_model"] + "r941_prom_sup_g5014/",
-    threads:
-        config["threads"]
+    threads: config["threads"]
     shell:
         """
         echo "##############################################"
@@ -513,14 +535,23 @@ rule clair3:
 rule snpeff_annotate_variants:
     input:
         vcf_medaka_variant=rules.medaka_variant.output.vcf_annotated,
-        vcf_medaka_haploid_variant=rules.medaka_haploid_variant.output.vcf_dir + "/medaka.annotated.vcf",
+        vcf_medaka_haploid_variant=rules.medaka_haploid_variant.output.vcf_dir
+        + "/medaka.annotated.vcf",
         vcf_freebayes=rules.freebayes.output.vcf,
         vcf_clair3=rules.clair3.output.vcf_dir + "/merge_output.vcf.gz",
     output:
-        vcf_medaka_variant=config["snpeff"]["dir"]["vcf_annot"].format(dir=config['dir']) + "{sample}-medaka-variant.vcf",
-        vcf_medaka_haploid_variant=config["snpeff"]["dir"]["vcf_annot"].format(dir=config['dir']) + "{sample}-medaka-haploid-variant.vcf",
-        vcf_freebayes=config["snpeff"]["dir"]["vcf_annot"].format(dir=config['dir']) + "{sample}-freebayes-variant.vcf",
-        vcf_clair3=config["snpeff"]["dir"]["vcf_annot"].format(dir=config['dir']) + "{sample}-clair3-variant.vcf",
+        vcf_medaka_variant=config["snpeff"]["dir"]["vcf_annot"].format(
+            dir=config["dir"]
+        )
+        + "{sample}-medaka-variant.vcf",
+        vcf_medaka_haploid_variant=config["snpeff"]["dir"]["vcf_annot"].format(
+            dir=config["dir"]
+        )
+        + "{sample}-medaka-haploid-variant.vcf",
+        vcf_freebayes=config["snpeff"]["dir"]["vcf_annot"].format(dir=config["dir"])
+        + "{sample}-freebayes-variant.vcf",
+        vcf_clair3=config["snpeff"]["dir"]["vcf_annot"].format(dir=config["dir"])
+        + "{sample}-clair3-variant.vcf",
     params:
         config=config["snpeff"]["config"],
         database=config["snpeff"]["database"],
@@ -568,10 +599,18 @@ rule snpsift_varType:
         vcf_freebayes=rules.snpeff_annotate_variants.output.vcf_freebayes,
         vcf_clair3=rules.snpeff_annotate_variants.output.vcf_clair3,
     output:
-        vcf_medaka_variant=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config['dir']) + "{sample}-medaka-variant-snpsift.vcf",
-        vcf_medaka_haploid_variant=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config['dir']) + "{sample}-medaka-haploid-variant-snpsift.vcf",
-        vcf_freebayes=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config['dir']) + "{sample}-freebayes-variant-snpsift.vcf",
-        vcf_clair3=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config['dir']) + "{sample}-clair3-variant-snpsift.vcf",
+        vcf_medaka_variant=config["snpeff"]["dir"]["vcf_vartype"].format(
+            dir=config["dir"]
+        )
+        + "{sample}-medaka-variant-snpsift.vcf",
+        vcf_medaka_haploid_variant=config["snpeff"]["dir"]["vcf_vartype"].format(
+            dir=config["dir"]
+        )
+        + "{sample}-medaka-haploid-variant-snpsift.vcf",
+        vcf_freebayes=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config["dir"])
+        + "{sample}-freebayes-variant-snpsift.vcf",
+        vcf_clair3=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config["dir"])
+        + "{sample}-clair3-variant-snpsift.vcf",
     singularity:
         "https://depot.galaxyproject.org/singularity/snpsift:5.2--hdfd78af_0"
     shell:
@@ -594,8 +633,14 @@ rule modify_vcf:
         vcf_medaka_variant=rules.snpsift_varType.output.vcf_medaka_variant,
         vcf_medaka_haploid_variant=rules.snpsift_varType.output.vcf_medaka_haploid_variant,
     output:
-        vcf_medaka_variant=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config['dir']) + "{sample}-medaka-variant-snpsift-modified.vcf",
-        vcf_medaka_haploid_variant=config["snpeff"]["dir"]["vcf_vartype"].format(dir=config['dir']) + "{sample}-medaka-haploid-variant-snpsift-modified.vcf",
+        vcf_medaka_variant=config["snpeff"]["dir"]["vcf_vartype"].format(
+            dir=config["dir"]
+        )
+        + "{sample}-medaka-variant-snpsift-modified.vcf",
+        vcf_medaka_haploid_variant=config["snpeff"]["dir"]["vcf_vartype"].format(
+            dir=config["dir"]
+        )
+        + "{sample}-medaka-haploid-variant-snpsift-modified.vcf",
     shell:
         """
         python workflow/scripts/modify_vcf.py {input.vcf_medaka_variant} {output.vcf_medaka_variant}
@@ -613,10 +658,14 @@ rule gatk_variants_to_table:
         vcf_freebayes=rules.snpsift_varType.output.vcf_freebayes,
         vcf_clair3=rules.snpsift_varType.output.vcf_clair3,
     output:
-        tsv_medaka_variant=config["gatk"]["dir"].format(dir=config['dir']) + "medaka_variant/{sample}-medaka_variant.tsv",
-        tsv_medaka_haploid_variant=config["gatk"]["dir"].format(dir=config['dir']) + "medaka_haploid_variant/{sample}-medaka_haploid_variant.tsv",
-        tsv_freebayes=config["gatk"]["dir"].format(dir=config['dir']) + "freebayes/{sample}-freebayes.tsv",
-        tsv_clair3=config["gatk"]["dir"].format(dir=config['dir']) + "clair3/{sample}-clair3.tsv",
+        tsv_medaka_variant=config["gatk"]["dir"].format(dir=config["dir"])
+        + "medaka_variant/{sample}-medaka_variant.tsv",
+        tsv_medaka_haploid_variant=config["gatk"]["dir"].format(dir=config["dir"])
+        + "medaka_haploid_variant/{sample}-medaka_haploid_variant.tsv",
+        tsv_freebayes=config["gatk"]["dir"].format(dir=config["dir"])
+        + "freebayes/{sample}-freebayes.tsv",
+        tsv_clair3=config["gatk"]["dir"].format(dir=config["dir"])
+        + "clair3/{sample}-clair3.tsv",
     params:
         java_opts=config["gatk"]["java_opts"],
     singularity:

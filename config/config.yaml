@@ -4,7 +4,7 @@
 # user specified output directory {default: YYYY_MM_DD-run}
 # --------------------------------
 # user can change this to any name
-dir: 2023_11_22-01
+dir: 2000_01_01-01
 
 
 # --------------------------------
