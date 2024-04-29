@@ -4,23 +4,24 @@
 #--- slurm commands ---
 # ********************************************************
 
-#SBATCH -J NanoRave
-#SBATCH --time=01:00:00
+#SBATCH -J NanoBCF
+#SBATCH --partition=longrun
+#SBATCH --time=04:00:00
 #SBATCH --ntasks=1
-#SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=10G
+#SBATCH --ntasks-per-node=4
+#SBATCH --cpus-per-task=2
+#SBATCH --mem=100G
 #SBATCH -o job.%j.out
 #SBATCH -e job.%j.err
 #SBATCH --mail-type=ALL
-#SBATCH --mail-user=<email>
+#SBATCH --mail-user=<>       # replace with your email address
 
 # ********************************************************
 # activate conda environment
 # ********************************************************
 
-source "${HOME}/mambaforge/etc/profile.d/conda.sh"
-conda activate snakemake
+source "${HOME}/miniforge3/etc/profile.d/conda.sh"
+conda activate snakemakeVersion7
 
 # ********************************************************
 #--- snakemake commands ---
@@ -31,11 +32,9 @@ snakemake \
 	--use-conda \
 	--conda-frontend mamba \
 	--use-singularity \
-	--cores 2 \
-	--jobs 2 \
-	--rerun-incomplete \
-	--quiet all \
-	--keep-going
+	--cores 8 \
+	--jobs 4 \
+	--rerun-incomplete
 
 # ********************************************************
 #--- end ---
