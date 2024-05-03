@@ -1,11 +1,12 @@
 # OS generated files
 **/.DS_Store
 
-# output files
+# output files and directories
 .snpEff.config
 output*
 *.tsv
 *.txt
+containers
 
 # gitignore files
 !input/.gitignore
